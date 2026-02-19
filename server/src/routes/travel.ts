@@ -1,6 +1,6 @@
 
 import { Router } from 'express';
-import { TravelRequest, Employee } from '../models.js';
+import { TravelRequest, Employee, ApprovalChainItem } from '../models.js';
 import { verifyToken, type AuthenticatedRequest } from '../jwt.js';
 import { createNotification } from './notifications.js';
 
@@ -8,6 +8,72 @@ const router = Router();
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Build the approval chain based on hierarchical manager structure and impact levels.
+ * Goes up the management chain until reaching a manager with impact level 3A, 3B, or 3C.
+ * @param requesterEmail - Email of the employee who created the request
+ * @returns Array of managers in approval order
+ */
+async function buildApprovalChain(requesterEmail: string): Promise<ApprovalChainItem[]> {
+  const approvalChain: ApprovalChainItem[] = [];
+  const visitedEmails = new Set<string>(); // Prevent infinite loops
+  
+  // Find the requester
+  const requester = await Employee.findOne({ email: requesterEmail.toLowerCase().trim() });
+  if (!requester || !requester.managerEmail) {
+    console.log('No manager found for requester:', requesterEmail);
+    return approvalChain;
+  }
+  
+  let currentManagerEmail = requester.managerEmail.toLowerCase().trim();
+  
+  // Keep going up the chain until we find a manager at 3A/3B/3C level
+  while (currentManagerEmail && !visitedEmails.has(currentManagerEmail)) {
+    visitedEmails.add(currentManagerEmail);
+    
+    const manager = await Employee.findOne({ email: currentManagerEmail });
+    if (!manager) {
+      console.log('Manager not found in Employee collection:', currentManagerEmail);
+      break;
+    }
+    
+    // Add this manager to the approval chain
+    approvalChain.push({
+      email: manager.email,
+      name: manager.employeeName,
+      impactLevel: manager.impactLevel || 'Unknown',
+      employeeNumber: manager.employeeNumber,
+      approved: false
+    });
+    
+    // Check if this manager has reached the final approval level (3A, 3B, or 3C)
+    const impactLevel = (manager.impactLevel || '').toUpperCase().trim();
+    if (impactLevel === '3A' || impactLevel === '3B' || impactLevel === '3C') {
+      console.log(`Reached final approval level: ${impactLevel} for ${manager.employeeName}`);
+      break; // Stop here - this is the final manager before POC
+    }
+    
+    // Move to the next manager up the chain
+    if (manager.managerEmail) {
+      currentManagerEmail = manager.managerEmail.toLowerCase().trim();
+    } else {
+      console.log('No higher manager found for:', manager.employeeName);
+      break;
+    }
+    
+    // Safety check: max 10 levels
+    if (approvalChain.length >= 10) {
+      console.warn('Approval chain exceeded 10 levels - stopping to prevent infinite loop');
+      break;
+    }
+  }
+  
+  console.log(`Built approval chain with ${approvalChain.length} manager(s):`, 
+    approvalChain.map(m => `${m.name} (${m.impactLevel})`).join(' → '));
+  
+  return approvalChain;
 }
 
 // Get all requests for the logged-in user
@@ -161,12 +227,19 @@ router.post('/', verifyToken, async (req: AuthenticatedRequest, res) => {
     const count = await TravelRequest.countDocuments();
     const uniqueId = `TR-${new Date().getFullYear()}-${String(1000 + count + 1).padStart(4, '0')}`;
 
+    // Build the hierarchical approval chain based on impact levels
+    const approvalChain = await buildApprovalChain(req.user!.email);
+
     const newRequest = await TravelRequest.create({
       userId: req.user!.userId,
       uniqueId,
       status: 'Pending',
       originatorEmail: req.user!.email,
       originatorName: employee.employeeName,
+      
+      // Approval chain
+      approvalChain,
+      currentApprovalIndex: 0,
       
       tripNature,
       mode,
@@ -209,8 +282,19 @@ router.post('/', verifyToken, async (req: AuthenticatedRequest, res) => {
 
     const obj = newRequest.toObject();
     
-    // Create notification for manager
-    if (employee.managerEmail) {
+    // Create notification for the first manager in the approval chain
+    if (approvalChain.length > 0) {
+      const firstManager = approvalChain[0];
+      await createNotification(
+        firstManager.email,
+        'request_created',
+        'New Travel Request - Awaiting Your Approval',
+        `${employee.employeeName} submitted a ${tripNature} travel request to ${resolvedDestination || 'multiple destinations'}. You are ${approvalChain.length > 1 ? 'the first' : 'the'} approver in this chain.`,
+        newRequest._id.toString(),
+        uniqueId
+      );
+    } else if (employee.managerEmail) {
+      // Fallback to old behavior if no approval chain
       await createNotification(
         employee.managerEmail,
         'request_created',
@@ -376,26 +460,12 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
 
     const employee = await Employee.findOne({ email: req.user!.email });
     const actorName = employee?.employeeName || req.user!.email;
-    const actorEmail = req.user!.email;
+    const actorEmail = req.user!.email.toLowerCase().trim();
 
     let statusMessage = '';
     
-    // Determine if this is Manager or POC approval based on current status
-    if (status === 'Approved') {
-      if (request.status === 'ManagerApproved') {
-        // POC approval - final approval
-        request.status = 'Approved';
-        request.pocApprovedBy = actorEmail;
-        request.pocApprovedAt = new Date();
-        statusMessage = `Request was approved by POC (${actorName}). Ready for vendor to process.`;
-      } else if (request.status === 'Pending') {
-        // Manager approval - send to POC
-        request.status = 'ManagerApproved';
-        request.managerApprovedBy = actorEmail;
-        request.managerApprovedAt = new Date();
-        statusMessage = `Request was approved by manager (${actorName}). Awaiting POC final approval.`;
-      }
-    } else if (status === 'Rejected') {
+    // Handle rejection
+    if (status === 'Rejected') {
       if (request.status === 'ManagerApproved') {
         // POC rejection
         request.status = 'POCRejected';
@@ -403,32 +473,76 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
         request.pocApprovedAt = new Date();
         statusMessage = `Request was rejected by POC (${actorName}).`;
       } else {
-        // Manager rejection
+        // Manager rejection (at any level)
         request.status = 'Rejected';
-        statusMessage = `Request was rejected by manager (${actorName}).`;
+        statusMessage = `Request was rejected by ${actorName}.`;
       }
-    }
-    
-    // Add comment if provided
-    if (comment && comment.trim()) {
-      statusMessage += ` Comment: "${comment.trim()}"`;
-    }
-    
-    // Add a system message about the status change
-    if (!request.chatMessages) request.chatMessages = [];
-    request.chatMessages.push({
+      
+      // Add comment if provided
+      if (comment && comment.trim()) {
+        statusMessage += ` Comment: "${comment.trim()}"`;
+      }
+      
+      // Add system message
+      if (!request.chatMessages) request.chatMessages = [];
+      request.chatMessages.push({
         sender: 'system@zuari.com',
         senderName: 'System',
         message: statusMessage,
         timestamp: new Date()
-    });
-
-    await request.save();
+      });
+      
+      await request.save();
+      
+      // Notify originator
+      await createNotification(
+        request.originatorEmail,
+        'rejection',
+        'Request Rejected',
+        statusMessage,
+        request._id.toString(),
+        request.uniqueId
+      );
+      
+      const obj = request.toObject();
+      return res.json({ 
+        ok: true, 
+        request: { 
+          ...obj, 
+          id: request._id.toString(),
+          originator: obj.originatorName || 'Unknown',
+          department: 'IT'
+        } 
+      });
+    }
     
-    // Create notifications based on status change
+    // Handle approval with multi-level chain
     if (status === 'Approved') {
-      if (request.status === 'Approved') {
-        // POC approved - notify employee (originator)
+      // Check if this is POC approval (status is already ManagerApproved)
+      if (request.status === 'ManagerApproved') {
+        // POC approval - final approval
+        request.status = 'Approved';
+        request.pocApprovedBy = actorEmail;
+        request.pocApprovedAt = new Date();
+        statusMessage = `Request was approved by POC (${actorName}). Ready for vendor to process.`;
+        
+        // Add comment if provided
+        if (comment && comment.trim()) {
+          statusMessage += ` Comment: "${comment.trim()}"`;
+        }
+        
+        // Add system message
+        if (!request.chatMessages) request.chatMessages = [];
+        request.chatMessages.push({
+          sender: 'system@zuari.com',
+          senderName: 'System',
+          message: statusMessage,
+          timestamp: new Date()
+        });
+        
+        await request.save();
+        
+        // Notify employee (originator)
         await createNotification(
           request.originatorEmail,
           'poc_approved',
@@ -437,45 +551,132 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
           request._id.toString(),
           request.uniqueId
         );
-      } else if (request.status === 'ManagerApproved') {
-        // Manager approved - notify employee and POC
-        await createNotification(
-          request.originatorEmail,
-          'manager_approved',
-          'Manager Approved',
-          `Your travel request ${request.uniqueId} was approved by your manager and is now with POC`,
-          request._id.toString(),
-          request.uniqueId
-        );
         
-        // Notify all POCs
-        const pocs = await Employee.find({ isPOC: true });
-        for (const poc of pocs) {
-          if (poc.email) {
-            await createNotification(
-              poc.email,
-              'manager_approved',
-              'Request Needs POC Review',
-              `Travel request ${request.uniqueId} from ${request.originatorName} needs your approval`,
-              request._id.toString(),
-              request.uniqueId
-            );
+        const obj = request.toObject();
+        return res.json({ 
+          ok: true, 
+          request: { 
+            ...obj, 
+            id: request._id.toString(),
+            originator: obj.originatorName || 'Unknown',
+            department: 'IT'
+          } 
+        });
+      }
+      
+      // Manager approval - handle multi-level chain
+      if (request.status === 'Pending') {
+        const approvalChain = request.approvalChain || [];
+        const currentIndex = request.currentApprovalIndex || 0;
+        
+        // Verify that the current user is the expected approver
+        if (currentIndex >= approvalChain.length) {
+          return res.status(400).json({ ok: false, error: 'No pending approvals in chain' });
+        }
+        
+        const currentApprover = approvalChain[currentIndex];
+        if (currentApprover.email.toLowerCase().trim() !== actorEmail) {
+          return res.status(403).json({ 
+            ok: false, 
+            error: `You are not the current approver. Waiting for ${currentApprover.name} to approve.` 
+          });
+        }
+        
+        // Mark this manager as approved
+        currentApprover.approved = true;
+        currentApprover.approvedAt = new Date();
+        
+        // Check if there are more managers in the chain
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < approvalChain.length) {
+          // Move to the next manager
+          request.currentApprovalIndex = nextIndex;
+          const nextApprover = approvalChain[nextIndex];
+          
+          statusMessage = `Request was approved by ${actorName} (${currentApprover.impactLevel}). Now awaiting approval from ${nextApprover.name} (${nextApprover.impactLevel}).`;
+          
+          // Add comment if provided
+          if (comment && comment.trim()) {
+            statusMessage += ` Comment: "${comment.trim()}"`;
           }
+          
+          // Add system message
+          if (!request.chatMessages) request.chatMessages = [];
+          request.chatMessages.push({
+            sender: 'system@zuari.com',
+            senderName: 'System',
+            message: statusMessage,
+            timestamp: new Date()
+          });
+          
+          await request.save();
+          
+          // Notify employee (originator) of progress
+          await createNotification(
+            request.originatorEmail,
+            'manager_approved',
+            'Manager Approved',
+            `Your travel request ${request.uniqueId} was approved by ${actorName} and is now with ${nextApprover.name}`,
+            request._id.toString(),
+            request.uniqueId
+          );
+          
+          // Notify the next manager
+          await createNotification(
+            nextApprover.email,
+            'request_created',
+            'Travel Request - Awaiting Your Approval',
+            `${request.originatorName}'s travel request ${request.uniqueId} requires your approval (Level ${nextIndex + 1} of ${approvalChain.length})`,
+            request._id.toString(),
+            request.uniqueId
+          );
+        } else {
+          // All managers in chain have approved - move to POC
+          request.status = 'ManagerApproved';
+          request.managerApprovedBy = actorEmail;
+          request.managerApprovedAt = new Date();
+          
+          statusMessage = `Request was approved by ${actorName} (${currentApprover.impactLevel}). All manager approvals complete. Awaiting POC final approval.`;
+          
+          // Add comment if provided
+          if (comment && comment.trim()) {
+            statusMessage += ` Comment: "${comment.trim()}"`;
+          }
+          
+          // Add system message
+          if (!request.chatMessages) request.chatMessages = [];
+          request.chatMessages.push({
+            sender: 'system@zuari.com',
+            senderName: 'System',
+            message: statusMessage,
+            timestamp: new Date()
+          });
+          
+          await request.save();
+          
+          // Notify employee (originator)
+          await createNotification(
+            request.originatorEmail,
+            'manager_approved',
+            'Manager Approved',
+            `Your travel request ${request.uniqueId} was approved by all managers and is now with Travel POC`,
+            request._id.toString(),
+            request.uniqueId
+          );
         }
       }
-    } else if (status === 'Rejected') {
-      // Rejection - notify employee
-      await createNotification(
-        request.originatorEmail,
-        'rejection',
-        'Request Rejected',
-        `Your travel request ${request.uniqueId} was rejected${comment ? `: ${comment}` : ''}`,
-        request._id.toString(),
-        request.uniqueId
-      );
     }
 
-    res.json({ ok: true, status: request.status });
+    const obj = request.toObject();
+    return res.json({ 
+      ok: true, 
+      request: { 
+        ...obj, 
+        id: request._id.toString(),
+        originator: obj.originatorName || 'Unknown',
+        department: 'IT'
+      } 
+    });
   } catch (err) {
       console.error('Error updating status:', err);
       res.status(500).json({ ok: false, error: 'Failed to update status' });

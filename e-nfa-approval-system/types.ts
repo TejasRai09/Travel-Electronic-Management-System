@@ -57,6 +57,15 @@ export interface VendorMessage {
   sentAt: string;
 }
 
+export interface ApprovalChainItem {
+  email: string;
+  name: string;
+  impactLevel: string;
+  employeeNumber: string;
+  approved: boolean;
+  approvedAt?: string;
+}
+
 export interface TravelRequest {
   id: string;
   uniqueId: string;
@@ -80,6 +89,9 @@ export interface TravelRequest {
   pocApprovedBy?: string;
   pocApprovedAt?: string;
   pocEditedAt?: string;
+  // Multi-level approval chain
+  approvalChain?: ApprovalChainItem[];
+  currentApprovalIndex?: number;
   // Production additions
   tripNature: TripNature;
   accommodationRequired: boolean;

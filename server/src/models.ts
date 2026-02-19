@@ -150,6 +150,15 @@ export type VendorMessage = {
   sentAt: Date;
 };
 
+export type ApprovalChainItem = {
+  email: string;
+  name: string;
+  impactLevel: string;
+  employeeNumber: string;
+  approved: boolean;
+  approvedAt?: Date;
+};
+
 export type TravelRequestDoc = {
   // Metadata
   userId: mongoose.Types.ObjectId;
@@ -164,6 +173,10 @@ export type TravelRequestDoc = {
   pocApprovedBy?: string;
   pocApprovedAt?: Date;
   pocEditedAt?: Date;
+  
+  // Multi-level approval chain
+  approvalChain?: ApprovalChainItem[];
+  currentApprovalIndex?: number;
 
   // Trip Config
   tripNature: string; // One Way, Round Trip
@@ -257,6 +270,18 @@ const vendorMessageSchema = new Schema<VendorMessage>(
   { _id: false }
 );
 
+const approvalChainItemSchema = new Schema<ApprovalChainItem>(
+  {
+    email: { type: String, required: true },
+    name: { type: String, required: true },
+    impactLevel: { type: String, required: true },
+    employeeNumber: { type: String, required: true },
+    approved: { type: Boolean, required: true, default: false },
+    approvedAt: { type: Date },
+  },
+  { _id: false }
+);
+
 const travelRequestSchema = new Schema<TravelRequestDoc>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -270,6 +295,9 @@ const travelRequestSchema = new Schema<TravelRequestDoc>(
     pocApprovedBy: { type: String },
     pocApprovedAt: { type: Date },
     pocEditedAt: { type: Date },
+    
+    approvalChain: { type: [approvalChainItemSchema], default: [] },
+    currentApprovalIndex: { type: Number, default: 0 },
 
     tripNature: { type: String, required: true },
     mode: { type: String, required: true },
