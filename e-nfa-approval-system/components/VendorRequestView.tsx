@@ -29,10 +29,8 @@ interface VendorRequestViewProps {
 const VendorRequestView: React.FC<VendorRequestViewProps> = ({ request: initialRequest, onBack }) => {
   const [request, setRequest] = useState<TravelRequest>(initialRequest);
   const [message, setMessage] = useState('');
-  const [chatMessage, setChatMessage] = useState('');
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [sendingChat, setSendingChat] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: 'image' | 'pdf' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,47 +139,6 @@ const VendorRequestView: React.FC<VendorRequestViewProps> = ({ request: initialR
       alert('Failed to send message');
     } finally {
       setSending(false);
-    }
-  };
-
-  const handleSendVendorChat = async () => {
-    if (!chatMessage.trim() || sendingChat) return;
-    
-    setSendingChat(true);
-    try {
-      const token = localStorage.getItem('travelDeskToken');
-      if (!token) {
-        alert('Please log in again. Your session has expired.');
-        setSendingChat(false);
-        return;
-      }
-      
-      const res = await fetch(`/api/vendor/requests/${request.id}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ message: chatMessage.trim() })
-      });
-      
-      const data = await res.json();
-      
-      if (data.ok && data.vendorChatMessages) {
-        // Update request with new vendor chat messages
-        setRequest(prev => ({
-          ...prev,
-          vendorChatMessages: data.vendorChatMessages
-        }));
-        setChatMessage('');
-      } else {
-        alert(data.error || 'Failed to send message');
-      }
-    } catch (err) {
-      console.error('Error sending vendor chat message:', err);
-      alert('Failed to send message');
-    } finally {
-      setSendingChat(false);
     }
   };
 
@@ -439,20 +396,127 @@ const VendorRequestView: React.FC<VendorRequestViewProps> = ({ request: initialR
         )}
       </div>
 
-      {/* Vendor Reply Section */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-5">
-        <h2 className="text-base font-bold text-slate-800 mb-4">Send Response to Customer</h2>
-        
-        <div className="mb-4">
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message here... (e.g., ticket details, booking confirmation, etc.)"
-            rows={4}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-          />
+      {/* Unified Chat Section */}
+      <div className="bg-gradient-to-br from-blue-50 to-purple-50/30 rounded-xl border border-blue-200 shadow-sm p-5 mb-5">
+        <div className="flex items-center gap-2 mb-4">
+          <MessageSquare size={20} className="text-blue-600" />
+          <h2 className="text-base font-bold text-slate-800">Conversation with Customer</h2>
         </div>
-
+        
+        {/* Chat Messages - Combined vendorMessages and vendorChatMessages */}
+        <div className="max-h-[500px] overflow-y-auto mb-4 space-y-3 bg-white rounded-lg p-4 border border-blue-100">
+          {(() => {
+            // Combine both message arrays and sort by timestamp
+            const allMessages: Array<{
+              type: 'vendor' | 'chat';
+              sender: string;
+              senderName: string;
+              message?: string;
+              attachments?: any[];
+              timestamp: string;
+            }> = [];
+            
+            // Add vendorMessages
+            if (request.vendorMessages) {
+              request.vendorMessages.forEach(msg => {
+                allMessages.push({
+                  type: 'vendor',
+                  sender: msg.sentBy || '',
+                  senderName: msg.sentByName,
+                  message: msg.message,
+                  attachments: msg.attachments,
+                  timestamp: msg.sentAt
+                });
+              });
+            }
+            
+            // Add vendorChatMessages
+            if (request.vendorChatMessages) {
+              request.vendorChatMessages.forEach(msg => {
+                allMessages.push({
+                  type: 'chat',
+                  sender: msg.sender,
+                  senderName: msg.senderName,
+                  message: msg.message,
+                  timestamp: msg.timestamp
+                });
+              });
+            }
+            
+            // Sort by timestamp
+            allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            
+            if (allMessages.length === 0) {
+              return <p className="text-sm text-slate-400 text-center py-12">No messages yet. Start the conversation!</p>;
+            }
+            
+            const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
+            
+            return allMessages.map((msg, idx) => {
+              const isCurrentUser = msg.sender.toLowerCase() === currentUserEmail;
+              const initials = getInitials(msg.senderName);
+              
+              return (
+                <div key={`msg-${idx}`} className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isCurrentUser ? 'bg-blue-600 text-white' : 'bg-purple-500 text-white'
+                  }`}>
+                    {initials}
+                  </div>
+                  <div className={`flex flex-col max-w-[75%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                    <div className={`px-4 py-2 rounded-xl text-sm ${
+                      isCurrentUser 
+                        ? 'bg-blue-600 text-white rounded-br-sm' 
+                        : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                    }`}>
+                      {msg.message && <p className="mb-2 last:mb-0">{msg.message}</p>}
+                      
+                      {/* Display attachments if present */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          {msg.attachments.map((file, fileIdx) => {
+                            const isImage = file.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                            const isPdf = file.fileName.match(/\.pdf$/i);
+                            
+                            return (
+                              <div key={fileIdx} className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white">
+                                {isImage ? (
+                                  <div className="relative group cursor-pointer" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'image' })}>
+                                    <img src={file.fileUrl} alt={file.fileName} className="w-full h-32 object-cover" />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <ImageIcon size={24} className="text-white" />
+                                    </div>
+                                  </div>
+                                ) : isPdf ? (
+                                  <div className="w-full h-32 bg-red-50 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'pdf' })}>
+                                    <FileText size={32} className="text-red-500 mb-1" />
+                                    <p className="text-xs text-red-600 font-semibold">PDF</p>
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-32 bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => window.open(file.fileUrl, '_blank')}>
+                                    <FileText size={32} className="text-slate-400 mb-1" />
+                                    <p className="text-xs text-slate-600">File</p>
+                                  </div>
+                                )}
+                                <div className="p-1.5 bg-slate-50">
+                                  <p className="text-xs text-slate-600 truncate" title={file.fileName}>{file.fileName}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {formatDateTime(msg.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+        
         {/* File Attachments Preview */}
         {selectedFiles.length > 0 && (
           <div className="mb-4">
@@ -462,167 +526,60 @@ const VendorRequestView: React.FC<VendorRequestViewProps> = ({ request: initialR
             </div>
           </div>
         )}
-
-        <div className="flex gap-3">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            multiple
-            accept="image/*,.pdf"
-            className="hidden"
+        
+        {/* Chat Input */}
+        <div className="flex flex-col gap-3">
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder="Type your message... (Press Enter to send, Shift+Enter for new line)"
+            rows={2}
+            className="w-full px-4 py-3 text-sm border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={sending}
-            className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-2 disabled:opacity-50"
-          >
-            <Paperclip size={18} />
-            Attach Files
-          </button>
-          <button
-            onClick={handleSendMessage}
-            disabled={sending || (!message.trim() && selectedFiles.length === 0)}
-            className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {sending ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send size={18} />
-                Send Response
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Previous Vendor Messages */}
-      {request.vendorMessages && request.vendorMessages.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <h2 className="text-base font-bold text-slate-800 mb-4">Previous Responses</h2>
-          <div className="space-y-6">
-            {request.vendorMessages.map((vendorMsg, idx) => (
-              <div key={idx} className="border-l-4 border-blue-500 pl-6 py-2">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-slate-800">{vendorMsg.sentByName}</span>
-                  <span className="text-xs text-slate-500">{formatDateTime(vendorMsg.sentAt)}</span>
-                </div>
-                {vendorMsg.message && (
-                  <p className="text-slate-700 mb-3">{vendorMsg.message}</p>
-                )}
-                {vendorMsg.attachments && vendorMsg.attachments.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
-                    {vendorMsg.attachments.map((file, fileIdx) => {
-                      const isImage = file.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                      const isPdf = file.fileName.match(/\.pdf$/i);
-                      
-                      return (
-                        <div key={fileIdx} className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                          {isImage ? (
-                            <div className="relative group cursor-pointer" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'image' })}>
-                              <img src={file.fileUrl} alt={file.fileName} className="w-full h-48 object-cover" />
-                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <ImageIcon size={32} className="text-white" />
-                              </div>
-                            </div>
-                          ) : isPdf ? (
-                            <div className="w-full h-48 bg-red-50 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'pdf' })}>
-                              <FileText size={48} className="text-red-500 mb-2" />
-                              <p className="text-sm text-red-600 font-semibold">PDF Document</p>
-                              <p className="text-xs text-slate-600 mt-1">Click to preview</p>
-                            </div>
-                          ) : (
-                            <div className="w-full h-48 bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => window.open(file.fileUrl, '_blank')}>
-                              <FileText size={48} className="text-slate-400 mb-2" />
-                              <p className="text-xs text-slate-600">Click to view</p>
-                            </div>
-                          )}
-                          <div className="p-2 bg-slate-50">
-                            <p className="text-xs text-slate-600 truncate" title={file.fileName}>{file.fileName}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Vendor Chat Section */}
-      {request.vendorMessages && request.vendorMessages.length > 0 && (
-        <div className="bg-gradient-to-br from-purple-50 to-pink-50/30 rounded-xl border border-purple-200 shadow-sm p-5 mt-5">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare size={18} className="text-purple-600" />
-            <h2 className="text-base font-bold text-slate-800">Chat with Requester</h2>
-          </div>
           
-          {/* Chat Messages */}
-          <div className="max-h-96 overflow-y-auto mb-4 space-y-3 bg-white rounded-lg p-4 border border-purple-100">
-            {(request.vendorChatMessages || []).length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-12">No messages yet. The requester can start a conversation with you.</p>
-            ) : (
-              request.vendorChatMessages.map((msg, idx) => {
-                const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
-                const isCurrentUser = msg.sender.toLowerCase() === currentUserEmail;
-                const initials = getInitials(msg.senderName);
-                
-                return (
-                  <div key={idx} className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                      isCurrentUser ? 'bg-purple-500 text-white' : 'bg-blue-500 text-white'
-                    }`}>
-                      {initials}
-                    </div>
-                    <div className={`flex flex-col max-w-[75%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                      <div className={`px-4 py-2 rounded-xl text-sm ${
-                        isCurrentUser 
-                          ? 'bg-purple-500 text-white rounded-br-sm' 
-                          : 'bg-blue-100 text-blue-900 rounded-bl-sm'
-                      }`}>
-                        {msg.message}
-                      </div>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {formatDateTime(msg.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-          
-          {/* Chat Input */}
           <div className="flex gap-2">
             <input
-              type="text"
-              value={chatMessage}
-              onChange={(e) => setChatMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendVendorChat();
-                }
-              }}
-              placeholder="Type your message..."
-              className="flex-1 px-4 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept="image/*,.pdf"
+              className="hidden"
             />
             <button
-              onClick={handleSendVendorChat}
-              disabled={!chatMessage.trim() || sendingChat}
-              className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending}
+              className="px-4 py-2 border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-2 disabled:opacity-50"
             >
-              {sendingChat ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              <Paperclip size={18} />
+              Attach
+            </button>
+            <button
+              onClick={handleSendMessage}
+              disabled={sending || (!message.trim() && selectedFiles.length === 0)}
+              className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {sending ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send size={18} />
+                  Send Message
+                </>
+              )}
             </button>
           </div>
         </div>
-      )}
+      </div>
 
       {/* File Preview Modal */}
       <FilePreviewModal />

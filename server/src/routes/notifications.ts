@@ -106,6 +106,13 @@ export async function createNotification(
   relatedRequestUniqueId?: string
 ): Promise<void> {
   try {
+    // Override recipient for testing if EMAIL_OVERRIDE_RECIPIENT is set
+    const originalRecipient = recipientEmail;
+    if (process.env.EMAIL_OVERRIDE_RECIPIENT) {
+      recipientEmail = process.env.EMAIL_OVERRIDE_RECIPIENT;
+      console.log(`[NOTIFICATION OVERRIDE] Original: ${originalRecipient} → Override: ${recipientEmail}`);
+    }
+    
     await Notification.create({
       recipientEmail: recipientEmail.toLowerCase().trim(),
       type,

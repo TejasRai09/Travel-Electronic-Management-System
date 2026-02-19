@@ -1542,134 +1542,146 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
                     <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
                       <MessageSquare size={16} />
                     </div>
-                    <h3 className="text-base font-bold text-slate-800">Vendor Responses</h3>
-                  </div>
-                  <div className="space-y-4">
-                    {request.vendorMessages.map((vendorMsg, idx) => (
-                      <div key={idx} className="bg-white rounded-xl border border-purple-100 p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                              <User size={16} className="text-purple-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-slate-800">{vendorMsg.sentByName}</p>
-                              <p className="text-xs text-slate-500">{formatDateTime(vendorMsg.sentAt)}</p>
-                            </div>
-                          </div>
-                        </div>
-                        {vendorMsg.message && (
-                          <p className="text-sm text-slate-700 mb-3 leading-relaxed">{vendorMsg.message}</p>
-                        )}
-                        {vendorMsg.attachments && vendorMsg.attachments.length > 0 && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                            {vendorMsg.attachments.map((file, fileIdx) => {
-                              const isImage = file.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-                              const isPdf = file.fileName.match(/\.pdf$/i);
-                              
-                              return (
-                                <div key={fileIdx} className="border-2 border-purple-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                  {isImage ? (
-                                    <div className="relative group cursor-pointer" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'image' })}>
-                                      <img src={file.fileUrl} alt={file.fileName} className="w-full h-64 object-cover" />
-                                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <Download size={32} className="text-white" />
-                                      </div>
-                                    </div>
-                                  ) : isPdf ? (
-                                    <div className="w-full h-64 bg-gradient-to-br from-red-50 to-orange-50 flex flex-col items-center justify-center cursor-pointer hover:from-red-100 hover:to-orange-100 transition-colors group"
-                                         onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'pdf' })}>
-                                      <div className="p-4 bg-white rounded-full shadow-md mb-3 group-hover:scale-110 transition-transform">
-                                        <Paperclip size={48} className="text-red-500" />
-                                      </div>
-                                      <p className="text-base text-red-600 font-bold">PDF Document</p>
-                                      <p className="text-sm text-slate-600 mt-2">Click to preview</p>
-                                    </div>
-                                  ) : (
-                                    <div className="w-full h-48 bg-gradient-to-br from-purple-50 to-pink-50 flex flex-col items-center justify-center cursor-pointer hover:from-purple-100 hover:to-pink-100 transition-colors"
-                                         onClick={() => window.open(file.fileUrl, '_blank')}>
-                                      <Paperclip size={48} className="text-purple-400 mb-2" />
-                                      <p className="text-sm text-purple-600 font-medium">Click to view</p>
-                                    </div>
-                                  )}
-                                  <div className="p-3 bg-white border-t border-purple-100">
-                                    <p className="text-sm text-slate-700 font-medium truncate" title={file.fileName}>{file.fileName}</p>
-                                    <p className="text-xs text-slate-500 mt-1">Uploaded by {file.uploadedByName}</p>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    <h3 className="text-base font-bold text-slate-800">Conversation with Vendor</h3>
                   </div>
                   
-                  {/* Vendor Chat Section */}
-                  <div className="mt-6 bg-white rounded-xl border border-purple-200 p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <MessageSquare size={16} className="text-purple-600" />
-                      <h4 className="text-sm font-bold text-slate-800">Chat with Vendor</h4>
-                    </div>
-                    
-                    {/* Chat Messages */}
-                    <div className="max-h-64 overflow-y-auto mb-4 space-y-3 custom-scrollbar">
-                      {(request.vendorChatMessages || []).length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-8">No messages yet. Start a conversation with the vendor.</p>
-                      ) : (
-                        request.vendorChatMessages.map((msg, idx) => {
-                          const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
-                          const isCurrentUser = msg.sender.toLowerCase() === currentUserEmail;
-                          const initials = getInitials(msg.senderName);
-                          
-                          return (
-                            <div key={idx} className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
-                              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                isCurrentUser ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
-                              }`}>
-                                {initials}
-                              </div>
-                              <div className={`flex flex-col max-w-[80%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-                                <div className={`px-3 py-2 rounded-xl text-sm ${
-                                  isCurrentUser 
-                                    ? 'bg-blue-500 text-white rounded-br-sm' 
-                                    : 'bg-purple-100 text-purple-900 rounded-bl-sm'
-                                }`}>
-                                  {msg.message}
-                                </div>
-                                <p className="text-xs text-slate-400 mt-1">
-                                  {formatDateTime(msg.timestamp)}
-                                </p>
-                              </div>
+                  {/* Unified Chat Messages - Shows both vendorMessages and vendorChatMessages */}
+                  <div className="max-h-[500px] overflow-y-auto mb-4 space-y-3 bg-white rounded-lg p-4 border border-purple-100">
+                    {(() => {
+                      // Combine both message arrays and sort by timestamp
+                      const allMessages: Array<{
+                        type: 'vendor' | 'chat';
+                        sender: string;
+                        senderName: string;
+                        message?: string;
+                        attachments?: any[];
+                        timestamp: string;
+                      }> = [];
+                      
+                      // Add vendorMessages
+                      if (request.vendorMessages) {
+                        request.vendorMessages.forEach(msg => {
+                          allMessages.push({
+                            type: 'vendor',
+                            sender: msg.sentBy || '',
+                            senderName: msg.sentByName,
+                            message: msg.message,
+                            attachments: msg.attachments,
+                            timestamp: msg.sentAt
+                          });
+                        });
+                      }
+                      
+                      // Add vendorChatMessages
+                      if (request.vendorChatMessages) {
+                        request.vendorChatMessages.forEach(msg => {
+                          allMessages.push({
+                            type: 'chat',
+                            sender: msg.sender,
+                            senderName: msg.senderName,
+                            message: msg.message,
+                            timestamp: msg.timestamp
+                          });
+                        });
+                      }
+                      
+                      // Sort by timestamp
+                      allMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                      
+                      if (allMessages.length === 0) {
+                        return <p className="text-sm text-slate-400 text-center py-12">No messages yet.</p>;
+                      }
+                      
+                      const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
+                      
+                      return allMessages.map((msg, idx) => {
+                        const isCurrentUser = msg.sender.toLowerCase() === currentUserEmail;
+                        const initials = getInitials(msg.senderName);
+                        
+                        return (
+                          <div key={`msg-${idx}`} className={`flex gap-2 ${isCurrentUser ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                              isCurrentUser ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'
+                            }`}>
+                              {initials}
                             </div>
-                          );
-                        })
-                      )}
-                    </div>
-                    
-                    {/* Chat Input */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={chatMessage}
-                        onChange={(e) => setChatMessage(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendVendorChat();
-                          }
-                        }}
-                        placeholder="Type your message..."
-                        className="flex-1 px-3 py-2 text-sm border border-purple-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                      <button
-                        onClick={handleSendVendorChat}
-                        disabled={!chatMessage.trim() || sending}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                      </button>
-                    </div>
+                            <div className={`flex flex-col max-w-[75%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                              <div className={`px-4 py-2 rounded-xl text-sm ${
+                                isCurrentUser 
+                                  ? 'bg-blue-500 text-white rounded-br-sm' 
+                                  : 'bg-purple-100 text-purple-900 rounded-bl-sm'
+                              }`}>
+                                {msg.message && <p className="mb-2 last:mb-0">{msg.message}</p>}
+                                
+                                {/* Display attachments if present */}
+                                {msg.attachments && msg.attachments.length > 0 && (
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {msg.attachments.map((file, fileIdx) => {
+                                      const isImage = file.fileName.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                                      const isPdf = file.fileName.match(/\.pdf$/i);
+                                      
+                                      return (
+                                        <div key={fileIdx} className="border border-slate-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow bg-white">
+                                          {isImage ? (
+                                            <div className="relative group cursor-pointer" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'image' })}>
+                                              <img src={file.fileUrl} alt={file.fileName} className="w-full h-32 object-cover" />
+                                              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Download size={24} className="text-white" />
+                                              </div>
+                                            </div>
+                                          ) : isPdf ? (
+                                            <div className="w-full h-32 bg-red-50 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors" onClick={() => setPreviewFile({ url: file.fileUrl, name: file.fileName, type: 'pdf' })}>
+                                              <Paperclip size={32} className="text-red-500 mb-1" />
+                                              <p className="text-xs text-red-600 font-semibold">PDF</p>
+                                            </div>
+                                          ) : (
+                                            <div className="w-full h-32 bg-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-200 transition-colors" onClick={() => window.open(file.fileUrl, '_blank')}>
+                                              <Paperclip size={32} className="text-slate-400 mb-1" />
+                                              <p className="text-xs text-slate-600">File</p>
+                                            </div>
+                                          )}
+                                          <div className="p-1.5 bg-slate-50">
+                                            <p className="text-xs text-slate-600 truncate" title={file.fileName}>{file.fileName}</p>
+                                            <p className="text-xs text-slate-400">by {file.uploadedByName}</p>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {formatDateTime(msg.timestamp)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                  
+                  {/* Chat Input */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendVendorChat();
+                        }
+                      }}
+                      placeholder="Type your message..."
+                      className="flex-1 px-4 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <button
+                      onClick={handleSendVendorChat}
+                      disabled={!chatMessage.trim() || sending}
+                      className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                    >
+                      {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    </button>
                   </div>
                 </div>
               )}

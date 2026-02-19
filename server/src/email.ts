@@ -9,6 +9,13 @@ type SendOtpParams = {
 
 export async function sendOtpEmail({ to, otp, subject, contextLine }: SendOtpParams) {
   const mode = (process.env.EMAIL_MODE || 'console').toLowerCase();
+  
+  // Override recipient for testing if EMAIL_OVERRIDE_RECIPIENT is set
+  const originalTo = to;
+  if (process.env.EMAIL_OVERRIDE_RECIPIENT) {
+    to = process.env.EMAIL_OVERRIDE_RECIPIENT;
+    console.log(`[EMAIL OVERRIDE] Original: ${originalTo} → Override: ${to}`);
+  }
 
   if (mode === 'console') {
     // eslint-disable-next-line no-console
