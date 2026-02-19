@@ -1,0 +1,33 @@
+<svg width="520" height="420" viewBox="0 0 520 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Travel icon">
+  <defs>
+    <linearGradient id="bg" x1="80" y1="40" x2="460" y2="380" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+    <filter id="s" x="-30" y="-30" width="580" height="480" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0369A1" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Soft badge -->
+  <g filter="url(#s)">
+    <rect x="60" y="58" width="400" height="300" rx="44" fill="rgba(255,255,255,0.16)" stroke="rgba(255,255,255,0.22)"/>
+  </g>
+
+  <!-- Route line -->
+  <path d="M140 270C190 220 220 212 276 206C336 199 366 180 404 140" stroke="rgba(224,242,254,0.9)" stroke-width="10" stroke-linecap="round" stroke-dasharray="2 22"/>
+  <circle cx="140" cy="270" r="12" fill="#FBBF24"/>
+  <circle cx="404" cy="140" r="12" fill="#FBBF24"/>
+
+  <!-- Suitcase -->
+  <rect x="130" y="124" width="168" height="180" rx="28" fill="rgba(255,255,255,0.82)"/>
+  <rect x="130" y="124" width="168" height="180" rx="28" stroke="rgba(224,242,254,0.85)" stroke-width="4"/>
+  <path d="M170 124V104C170 90 181 78 195 78H233C247 78 258 90 258 104V124" stroke="#0F766E" stroke-width="10" stroke-linecap="round"/>
+  <path d="M168 182H260" stroke="#0369A1" stroke-width="10" stroke-linecap="round" opacity="0.35"/>
+  <path d="M168 218H260" stroke="#0369A1" stroke-width="10" stroke-linecap="round" opacity="0.22"/>
+
+  <!-- Simple airplane mark -->
+  <g transform="translate(310 170) rotate(-18)">
+    <path d="M22 10L148 40C154 41 156 49 151 52L125 74C122 76 118 77 114 76L60 62L42 78L62 91C66 94 66 99 63 102L54 112C51 116 45 117 41 114L20 98L6 110C1 114 -4 109 0 104L14 92L0 66C-2 62 0 56 4 54L14 48C17 46 21 47 23 50L39 70L58 56L42 8C41 5 44 2 48 3L72 27C74 29 76 32 75 36L62 86L76 98L98 46C100 42 104 39 108 40Z" fill="url(#bg)"/>
+  </g>
+</svg>

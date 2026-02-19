@@ -1,0 +1,20 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="presentation" aria-hidden="true">
+  <defs>
+    <linearGradient id="p" x1="60" y1="90" x2="840" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#14B8A6" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+  <g opacity="0.65">
+    <path d="M120 220C220 120 350 120 450 220C550 320 680 320 780 220" stroke="url(#p)" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 22"/>
+    <path d="M120 470C220 370 350 370 450 470C550 570 680 570 780 470" stroke="url(#p)" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 22"/>
+    <path d="M120 720C220 620 350 620 450 720C550 820 680 820 780 720" stroke="url(#p)" stroke-width="10" stroke-linecap="round" stroke-dasharray="3 22"/>
+
+    <circle cx="132" cy="220" r="12" fill="#FDE68A"/>
+    <circle cx="780" cy="220" r="12" fill="#FDE68A"/>
+    <circle cx="132" cy="470" r="12" fill="#FDE68A"/>
+    <circle cx="780" cy="470" r="12" fill="#FDE68A"/>
+    <circle cx="132" cy="720" r="12" fill="#FDE68A"/>
+    <circle cx="780" cy="720" r="12" fill="#FDE68A"/>
+  </g>
+</svg>

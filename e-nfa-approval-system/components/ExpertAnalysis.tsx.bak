@@ -1,0 +1,132 @@
+
+import React, { useState } from 'react';
+import { BrainCircuit, Sparkles, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
+// Corrected import to use TravelRequest instead of NfaRequest
+import { TravelRequest } from '../types';
+import { getExpertOpinion } from '../services/geminiService';
+
+interface ExpertAnalysisProps {
+  // Use TravelRequest from types.ts
+  requests: TravelRequest[];
+}
+
+const ExpertAnalysis: React.FC<ExpertAnalysisProps> = ({ requests }) => {
+  // Corrected state type to TravelRequest
+  const [selectedReq, setSelectedReq] = useState<TravelRequest | null>(null);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Corrected parameter type to TravelRequest
+  const handleAnalyze = async (req: TravelRequest) => {
+    setSelectedReq(req);
+    setLoading(true);
+    const result = await getExpertOpinion(req);
+    setAnalysis(result);
+    setLoading(false);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col h-full">
+        <h3 className="text-lg font-bold text-slate-800 mb-4">Select Request for AI Insights</h3>
+        <div className="space-y-3 overflow-y-auto flex-1 pr-2">
+          {requests.map((req) => (
+            <button
+              key={req.id}
+              onClick={() => handleAnalyze(req)}
+              className={`
+                w-full text-left p-4 rounded-xl border transition-all
+                ${selectedReq?.id === req.id 
+                  ? 'bg-blue-50 border-blue-200 shadow-sm' 
+                  : 'bg-slate-50 border-transparent hover:border-slate-200'}
+              `}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-xs font-bold text-blue-600">#{req.uniqueId}</span>
+                <span className="text-xs text-slate-400">{req.department}</span>
+              </div>
+              <p className="text-sm font-medium text-slate-800 line-clamp-1">{req.purpose}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="lg:col-span-2 min-h-[500px]">
+        {!selectedReq ? (
+          <div className="h-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-400 p-12 text-center">
+            <BrainCircuit size={48} strokeWidth={1.5} className="mb-4 opacity-50" />
+            <h4 className="text-slate-800 font-semibold text-lg">AI Expert Opinion</h4>
+            <p className="max-w-xs mt-2 text-sm">Select a request from the sidebar to generate an AI-powered risk assessment and feasibility analysis.</p>
+          </div>
+        ) : loading ? (
+          <div className="h-full bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-12">
+            <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+            <p className="text-slate-800 font-medium">Analyzing request data...</p>
+            <p className="text-slate-400 text-sm mt-2">Consulting Gemini Expert Intelligence</p>
+          </div>
+        ) : analysis ? (
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                  <Sparkles size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">Expert Insights</h3>
+                  <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">Gemini 3 Flash Pro Engine</p>
+                </div>
+              </div>
+              <div className={`px-4 py-2 rounded-2xl border flex items-center gap-2 font-bold ${
+                analysis.riskLevel.toLowerCase().includes('low') 
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                  : analysis.riskLevel.toLowerCase().includes('high')
+                  ? 'bg-rose-50 text-rose-700 border-rose-100'
+                  : 'bg-amber-50 text-amber-700 border-amber-100'
+              }`}>
+                {analysis.riskLevel.toLowerCase().includes('high') ? <AlertCircle size={18}/> : <ShieldCheck size={18}/>}
+                {analysis.riskLevel} Risk
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <BrainCircuit size={18} className="text-blue-500" /> Executive Summary
+                </h4>
+                <p className="text-sm text-slate-600 leading-relaxed">{analysis.summary}</p>
+              </div>
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <h4 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <ShieldCheck size={18} className="text-emerald-500" /> Recommendation
+                </h4>
+                <p className="text-sm font-medium text-slate-700 bg-white p-3 rounded-xl border border-slate-200">
+                  {analysis.recommendation}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-bold text-slate-800 mb-4 px-2">Key Considerations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {analysis.keyPoints.map((point: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3 p-3 hover:bg-slate-50 rounded-xl transition-colors">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 shrink-0"></div>
+                    <span className="text-sm text-slate-600">{point}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center text-slate-400 p-12 text-center">
+             <BrainCircuit size={48} strokeWidth={1.5} className="mb-4 opacity-50" />
+             <p className="text-slate-800 font-semibold">Something went wrong</p>
+             <p className="text-sm mt-2">Could not generate AI analysis. Please try again later.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default ExpertAnalysis;

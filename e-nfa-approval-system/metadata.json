@@ -1,0 +1,7 @@
+{
+  "name": "E-NFA Approval System",
+  "description": "A modern, high-performance dashboard for managing 'Note for Approval' (NFA) workflows, featuring AI-powered expert insights, real-time analytics, and role-based access control.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

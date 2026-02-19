@@ -1,0 +1,65 @@
+<svg width="900" height="700" viewBox="0 0 900 700" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Travel illustration">
+  <defs>
+    <linearGradient id="g1" x1="120" y1="40" x2="820" y2="660" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="160" y1="120" x2="780" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+    <filter id="blur" x="-40" y="-40" width="980" height="780" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <!-- Soft blobs -->
+  <g filter="url(#blur)" opacity="0.8">
+    <path d="M163 205C222 86 370 38 472 73C574 108 639 184 680 273C721 362 745 472 686 559C627 646 504 682 392 657C280 632 147 573 120 468C93 363 104 324 163 205Z" fill="url(#g1)"/>
+    <path d="M660 150C724 176 792 248 806 322C820 396 784 456 735 519C686 582 620 652 543 657C466 662 402 598 360 528C318 458 281 372 314 295C347 218 596 124 660 150Z" fill="#38BDF8" opacity="0.28"/>
+  </g>
+
+  <!-- Glass card -->
+  <rect x="150" y="120" width="600" height="420" rx="36" fill="url(#g2)" stroke="#FFFFFF" stroke-opacity="0.22"/>
+
+  <!-- Map route dots -->
+  <g opacity="0.9">
+    <path d="M235 415C293 354 338 324 420 310C514 294 579 258 665 205" stroke="#E0F2FE" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 18"/>
+    <circle cx="235" cy="415" r="10" fill="#FDE68A"/>
+    <circle cx="665" cy="205" r="10" fill="#FDE68A"/>
+  </g>
+
+  <!-- Airplane -->
+  <g transform="translate(502 175) rotate(-12)">
+    <path d="M46 18L214 58C222 60 226 70 220 76L188 108C184 112 178 114 172 112L98 92L72 122L100 142C104 145 105 150 102 154L90 170C86 176 78 178 72 174L38 152L12 178C4 186 -8 176 0 168L26 142L4 108C0 102 2 94 8 90L24 78C28 75 33 76 36 80L58 108L88 82L68 8C66 2 70 -4 76 -2L108 30C112 34 114 40 112 46L92 120L122 146L152 72C154 66 160 62 166 64Z" fill="#FFFFFF" fill-opacity="0.9"/>
+    <path d="M46 18L214 58C222 60 226 70 220 76L188 108C184 112 178 114 172 112L98 92L72 122L100 142C104 145 105 150 102 154L90 170C86 176 78 178 72 174L38 152L12 178C4 186 -8 176 0 168L26 142L4 108C0 102 2 94 8 90L24 78C28 75 33 76 36 80L58 108L88 82L68 8C66 2 70 -4 76 -2L108 30C112 34 114 40 112 46L92 120L122 146L152 72C154 66 160 62 166 64Z" stroke="#E0F2FE" stroke-width="2"/>
+  </g>
+
+  <!-- Train card -->
+  <g transform="translate(215 220)">
+    <rect x="0" y="0" width="260" height="165" rx="22" fill="#0B1220" fill-opacity="0.22" stroke="#FFFFFF" stroke-opacity="0.18"/>
+    <rect x="22" y="28" width="82" height="42" rx="10" fill="#E0F2FE" fill-opacity="0.75"/>
+    <rect x="116" y="28" width="122" height="42" rx="10" fill="#E0F2FE" fill-opacity="0.48"/>
+    <rect x="22" y="82" width="216" height="14" rx="7" fill="#BAE6FD" fill-opacity="0.5"/>
+    <path d="M44 140H216" stroke="#E0F2FE" stroke-opacity="0.7" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="74" cy="140" r="12" fill="#FDE68A"/>
+    <circle cx="186" cy="140" r="12" fill="#FDE68A"/>
+  </g>
+
+  <!-- Suitcase icon -->
+  <g transform="translate(590 380)">
+    <rect x="0" y="22" width="120" height="132" rx="20" fill="#FFFFFF" fill-opacity="0.26" stroke="#FFFFFF" stroke-opacity="0.24"/>
+    <path d="M36 22V14C36 6 42 0 50 0H70C78 0 84 6 84 14V22" stroke="#E0F2FE" stroke-opacity="0.85" stroke-width="6" stroke-linecap="round"/>
+    <path d="M30 66H90" stroke="#E0F2FE" stroke-opacity="0.65" stroke-width="6" stroke-linecap="round"/>
+    <path d="M30 94H90" stroke="#E0F2FE" stroke-opacity="0.45" stroke-width="6" stroke-linecap="round"/>
+  </g>
+
+  <!-- Small pins -->
+  <g opacity="0.9">
+    <path d="M705 470C705 440 729 416 759 416C789 416 813 440 813 470C813 520 759 560 759 560C759 560 705 520 705 470Z" fill="#FDE68A" fill-opacity="0.9"/>
+    <circle cx="759" cy="470" r="18" fill="#0F766E" fill-opacity="0.55"/>
+
+    <path d="M470 510C470 490 486 474 506 474C526 474 542 490 542 510C542 544 506 572 506 572C506 572 470 544 470 510Z" fill="#BAE6FD" fill-opacity="0.9"/>
+    <circle cx="506" cy="510" r="12" fill="#0EA5E9" fill-opacity="0.55"/>
+  </g>
+</svg>

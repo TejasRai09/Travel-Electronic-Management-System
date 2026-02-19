@@ -1,0 +1,82 @@
+/* Global styles for the auth screens.
+   Tailwind is loaded via CDN; this file adds a few small utilities used by components. */
+
+:root {
+  color-scheme: light;
+
+  /* Brand palette (kept as CSS variables so we don't scatter colors across components) */
+  --brand-sky: #0ea5e9;
+  --brand-sky-deep: #0369a1;
+  --brand-teal: #14b8a6;
+  --brand-teal-deep: #0f766e;
+  --brand-amber: #fbbf24;
+
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --ring: rgba(2, 132, 199, 0.25);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* Background (subtle, travel-ish sky gradient) */
+  background:
+    radial-gradient(900px 520px at 18% 18%, rgba(14, 165, 233, 0.16), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(900px 520px at 82% 28%, rgba(20, 184, 166, 0.14), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(800px 520px at 55% 88%, rgba(251, 191, 36, 0.10), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 60%, #eef2ff 100%);
+}
+
+/* A small set of motion utilities (replacement for tailwindcss-animate plugin classes). */
+@keyframes authFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes authSlideInLeft {
+  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes authSlideInRight {
+  from { opacity: 0; transform: translate3d(16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes authZoomIn95 {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.auth-appear-fade {
+  animation: authFadeIn 500ms ease-out both;
+}
+
+.auth-appear-left {
+  animation: authSlideInLeft 500ms ease-out both;
+}
+
+.auth-appear-right {
+  animation: authSlideInRight 500ms ease-out both;
+}
+
+.auth-appear-zoom {
+  animation: authZoomIn95 300ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-appear-fade,
+  .auth-appear-left,
+  .auth-appear-right,
+  .auth-appear-zoom {
+    animation: none !important;
+  }
+}
