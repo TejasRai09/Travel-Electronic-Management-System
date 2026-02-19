@@ -107,43 +107,70 @@ router.get('/approvals', verifyToken, async (req: AuthenticatedRequest, res) => 
       email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') },
     });
 
-    const subordinateCriteria: Record<string, unknown>[] = [
-      { managerEmail: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') } },
-    ];
-
-    if (manager?.employeeNumber) {
-      subordinateCriteria.push({ managerEmployeeNo: manager.employeeNumber });
-    }
-
-    if (manager?.employeeName) {
-      subordinateCriteria.push({
-        managerEmployeeName: { $regex: new RegExp(`^${escapeRegExp(manager.employeeName)}$`, 'i') },
-      });
-    }
-
-    // Find employees who report to this manager
-    const subordinates = await Employee.find({ $or: subordinateCriteria });
-    const subordinateEmails = subordinates.map(emp => emp.email);
+    // Build query based on approval chain
+    const query: any = {};
     
-    // Build query - filter by status if provided
-    const query: any = { 
-      originatorEmail: { $in: subordinateEmails }
-    };
-    
-    if (statusFilter) {
-      // For manager's approved tab, show requests where manager has approved
-      // This includes both ManagerApproved and Approved (after POC approval)
-      if (statusFilter === 'ManagerApproved') {
-        query.$or = [
-          { status: 'ManagerApproved' },
-          { status: 'Approved', managerApprovedBy: { $exists: true, $ne: null } }
-        ];
-      } else {
-        query.status = statusFilter;
-      }
+    if (statusFilter === 'Pending') {
+      // For pending tab: show requests where this manager is the current approver
+      query.status = 'Pending';
+      query.approvalChain = {
+        $elemMatch: {
+          email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') }
+        }
+      };
+      // Additional filter: manager must be at currentApprovalIndex and not yet approved
+      query.$expr = {
+        $and: [
+          { $gte: [{ $size: '$approvalChain' }, 1] },
+          {
+            $eq: [
+              { $arrayElemAt: ['$approvalChain.email', '$currentApprovalIndex'] },
+              userEmail
+            ]
+          },
+          {
+            $eq: [
+              { $arrayElemAt: ['$approvalChain.approved', '$currentApprovalIndex'] },
+              false
+            ]
+          }
+        ]
+      };
+    } else if (statusFilter === 'ManagerApproved' || statusFilter === 'Rejected') {
+      // For approved/rejected tabs: show requests where this manager has already approved/rejected
+      // or is in the approval chain
+      query.$or = [
+        {
+          status: statusFilter,
+          approvalChain: {
+            $elemMatch: {
+              email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') }
+            }
+          }
+        },
+        // Fallback: old system (direct subordinates)
+        {
+          status: statusFilter,
+          originatorEmail: { 
+            $in: await Employee.find({
+              $or: [
+                { managerEmail: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') } },
+                ...(manager?.employeeNumber ? [{ managerEmployeeNo: manager.employeeNumber }] : [])
+              ]
+            }).then(subs => subs.map(s => s.email))
+          }
+        }
+      ];
+    } else {
+      // No filter: show all requests where manager is in approval chain
+      query.approvalChain = {
+        $elemMatch: {
+          email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') }
+        }
+      };
     }
     
-    // Find requests from subordinates
+    // Find requests
     const rawRequests = await TravelRequest.find(query).sort({ createdAt: -1 });
     
     const requests = rawRequests.map(req => {
@@ -157,22 +184,64 @@ router.get('/approvals', verifyToken, async (req: AuthenticatedRequest, res) => 
     });
     
     // Get counts by status for dashboard stats
+    const pendingQuery: any = {
+      status: 'Pending',
+      approvalChain: {
+        $elemMatch: {
+          email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') }
+        }
+      },
+      $expr: {
+        $and: [
+          { $gte: [{ $size: '$approvalChain' }, 1] },
+          {
+            $eq: [
+              { $arrayElemAt: ['$approvalChain.email', '$currentApprovalIndex'] },
+              userEmail
+            ]
+          },
+          {
+            $eq: [
+              { $arrayElemAt: ['$approvalChain.approved', '$currentApprovalIndex'] },
+              false
+            ]
+          }
+        ]
+      }
+    };
+    
     const counts = {
-      pending: await TravelRequest.countDocuments({ 
-        originatorEmail: { $in: subordinateEmails },
-        status: 'Pending'
-      }),
-      // Count includes both ManagerApproved and Approved (where manager has approved)
+      pending: await TravelRequest.countDocuments(pendingQuery),
       approved: await TravelRequest.countDocuments({ 
-        originatorEmail: { $in: subordinateEmails },
         $or: [
-          { status: 'ManagerApproved' },
-          { status: 'Approved', managerApprovedBy: { $exists: true, $ne: null } }
+          {
+            status: 'ManagerApproved',
+            approvalChain: {
+              $elemMatch: {
+                email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') },
+                approved: true
+              }
+            }
+          },
+          {
+            status: 'Approved',
+            approvalChain: {
+              $elemMatch: {
+                email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') },
+                approved: true
+              }
+            }
+          }
         ]
       }),
       rejected: await TravelRequest.countDocuments({ 
-        originatorEmail: { $in: subordinateEmails },
-        status: 'Rejected'
+        status: 'Rejected',
+        approvalChain: {
+          $elemMatch: {
+            email: { $regex: new RegExp(`^${escapeRegExp(userEmail)}$`, 'i') }
+          }
+        }
+      })
       })
     };
     

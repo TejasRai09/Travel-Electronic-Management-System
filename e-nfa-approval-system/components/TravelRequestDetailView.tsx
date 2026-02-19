@@ -9,6 +9,7 @@ import {
   Briefcase,
   Hotel,
   User,
+  Users,
   Phone,
   Utensils,
   CheckCircle2,
@@ -134,6 +135,106 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
   };
 
   // Status Tracker Component
+  // Approval Chain Component
+  const ApprovalChainTracker = () => {
+    const approvalChain = request.approvalChain || [];
+    const currentIndex = request.currentApprovalIndex || 0;
+    const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
+    
+    // Check if current user is in the approval chain and has already approved
+    const currentUserInChain = approvalChain.find(a => a.email.toLowerCase() === currentUserEmail);
+    const hasCurrentUserApproved = currentUserInChain?.approved || false;
+    const isCurrentUserPendingApprover = currentIndex < approvalChain.length && 
+                                          approvalChain[currentIndex]?.email.toLowerCase() === currentUserEmail &&
+                                          !approvalChain[currentIndex]?.approved;
+    
+    if (approvalChain.length === 0) return null;
+    
+    return (
+      <div className="bg-gradient-to-br from-indigo-50 to-purple-50/30 rounded-xl p-5 border border-indigo-200/60 shadow-sm mb-5">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+            <Users size={16} />
+          </div>
+          <h3 className="text-base font-bold text-slate-800">Manager Approval Chain</h3>
+        </div>
+        
+        <div className="space-y-3">
+          {approvalChain.map((approver, index) => (
+            <div 
+              key={index}
+              className={`flex items-center gap-4 p-3 rounded-lg transition-all ${
+                approver.approved 
+                  ? 'bg-emerald-50 border border-emerald-200' 
+                  : index === currentIndex
+                  ? 'bg-blue-50 border border-blue-200 ring-2 ring-blue-100'
+                  : 'bg-slate-50 border border-slate-200'
+              }`}
+            >
+              {/* Step Number/Status */}
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                approver.approved
+                  ? 'bg-emerald-500 text-white'
+                  : index === currentIndex
+                  ? 'bg-blue-500 text-white animate-pulse'
+                  : 'bg-slate-300 text-slate-600'
+              }`}>
+                {approver.approved ? <Check size={18} /> : index + 1}
+              </div>
+              
+              {/* Approver Info */}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-slate-800">{approver.name}</p>
+                  {approver.email.toLowerCase() === currentUserEmail && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                      You
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">Impact Level: {approver.impactLevel}</p>
+                {approver.approved && approver.approvedAt && (
+                  <p className="text-xs text-emerald-600 font-medium mt-1">
+                    ✓ Approved {formatDateTime(approver.approvedAt)}
+                  </p>
+                )}
+                {!approver.approved && index === currentIndex && (
+                  <p className="text-xs text-blue-600 font-medium mt-1">
+                    ⏳ Pending approval
+                  </p>
+                )}
+                {!approver.approved && index > currentIndex && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Waiting for previous approvals
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Current User Status Message */}
+        {hasCurrentUserApproved && (
+          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
+            <CheckCircle2 size={18} className="text-emerald-600" />
+            <p className="text-sm text-emerald-700 font-medium">
+              You have approved this request. It is now with {currentIndex < approvalChain.length ? approvalChain[currentIndex]?.name : 'POC'} for review.
+            </p>
+          </div>
+        )}
+        
+        {isCurrentUserPendingApprover && (
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+            <Clock size={18} className="text-blue-600" />
+            <p className="text-sm text-blue-700 font-medium">
+              This request is awaiting your approval.
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   const StatusTracker = () => {
     const hasVendorResponses = request.vendorMessages && request.vendorMessages.length > 0;
     const hasVendorAttachments = hasVendorResponses && request.vendorMessages.some(msg => msg.attachments && msg.attachments.length > 0);
@@ -287,30 +388,72 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
                     </div>
                     
                     {/* Action Buttons for Manager Review */}
-                    {step.id === 2 && isManager && request.status === TravelStatus.PENDING && !isOriginator && (
-                      <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
-                        <button
-                          onClick={() => {
-                            setConfirmAction('Rejected');
-                            setShowConfirmModal(true);
-                          }}
-                          className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <X size={18} />
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => {
-                            setConfirmAction('Approved');
-                            setShowConfirmModal(true);
-                          }}
-                          className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Check size={18} />
-                          Approve
-                        </button>
-                      </div>
-                    )}
+                    {(() => {
+                      const currentUserEmail = localStorage.getItem('userEmail')?.toLowerCase() || '';
+                      const approvalChain = request.approvalChain || [];
+                      const currentIndex = request.currentApprovalIndex || 0;
+                      const currentUserInChain = approvalChain.find(a => a.email.toLowerCase() === currentUserEmail);
+                      const hasCurrentUserApproved = currentUserInChain?.approved || false;
+                      const isCurrentUserPendingApprover = currentIndex < approvalChain.length && 
+                                                            approvalChain[currentIndex]?.email.toLowerCase() === currentUserEmail &&
+                                                            !approvalChain[currentIndex]?.approved;
+                      
+                      if (step.id === 2 && isManager && request.status === TravelStatus.PENDING && !isOriginator) {
+                        if (hasCurrentUserApproved) {
+                          return (
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-emerald-600" />
+                                <p className="text-sm text-emerald-700 font-medium">
+                                  You have already approved this request.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        if (!isCurrentUserPendingApprover && approvalChain.length > 0) {
+                          const currentApprover = approvalChain[currentIndex];
+                          return (
+                            <div className="mt-4 pt-4 border-t border-slate-200">
+                              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                                <Clock size={18} className="text-amber-600" />
+                                <p className="text-sm text-amber-700 font-medium">
+                                  Waiting for {currentApprover?.name || 'another manager'} to approve.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // User is the current pending approver - show buttons
+                        return (
+                          <div className="mt-4 pt-4 border-t border-slate-200 flex gap-2">
+                            <button
+                              onClick={() => {
+                                setConfirmAction('Rejected');
+                                setShowConfirmModal(true);
+                              }}
+                              className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                              <X size={18} />
+                              Reject
+                            </button>
+                            <button
+                              onClick={() => {
+                                setConfirmAction('Approved');
+                                setShowConfirmModal(true);
+                              }}
+                              className="flex-1 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Check size={18} />
+                              Approve
+                            </button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     
                     {/* Action Buttons for POC Review */}
                     {step.id === 3 && isPOC && request.status === TravelStatus.MANAGER_APPROVED && !isOriginator && (
@@ -1534,6 +1677,9 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
 
               {/* Status Tracker */}
               <StatusTracker />
+              
+              {/* Approval Chain Tracker */}
+              {(isManager || isPOC) && <ApprovalChainTracker />}
 
               {/* Vendor Messages Section */}
               {request.vendorMessages && request.vendorMessages.length > 0 && (
