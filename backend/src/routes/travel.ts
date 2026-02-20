@@ -438,6 +438,15 @@ router.post('/:id/chat', verifyToken, async (req: AuthenticatedRequest, res) => 
     request.chatMessages.push(chatMessage);
     await request.save();
     
+    // Log the chat message activity
+    await logActivity(
+      req.user!.email,
+      senderName,
+      'send_chat_message',
+      `Sent message in travel request ${request.uniqueId}: "${message.trim().substring(0, 50)}${message.trim().length > 50 ? '...' : ''}"`,
+      req
+    );
+    
     res.json({ ok: true, message: chatMessage });
   } catch (err) {
     console.error('Error adding chat message:', err);

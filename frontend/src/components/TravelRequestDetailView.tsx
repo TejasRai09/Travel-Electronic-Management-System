@@ -37,9 +37,10 @@ interface TravelRequestDetailViewProps {
   onBack: () => void;
   isPOC?: boolean;
   isManager?: boolean;
+  isVendor?: boolean;
 }
 
-const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ request: initialRequest, onBack, isPOC = false, isManager = false }) => {
+const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ request: initialRequest, onBack, isPOC = false, isManager = false, isVendor = false }) => {
   const [chatMessage, setChatMessage] = useState('');
   const [request, setRequest] = useState<TravelRequest>(initialRequest);
   const [sending, setSending] = useState(false);
@@ -1806,29 +1807,36 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
                     })()}
                   </div>
                   
-                  {/* Chat Input */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={chatMessage}
-                      onChange={(e) => setChatMessage(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendVendorChat();
-                        }
-                      }}
-                      placeholder="Type your message..."
-                      className="flex-1 px-4 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <button
-                      onClick={handleSendVendorChat}
-                      disabled={!chatMessage.trim() || sending}
-                      className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                    >
-                      {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    </button>
-                  </div>
+                  {/* Chat Input - Vendor Communication */}
+                  {!(isPOC || isVendor) ? (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                      <p className="text-xs text-amber-700 font-medium">🔒 Only Travel POC and Vendor can communicate here</p>
+                      <p className="text-[10px] text-amber-600 mt-1">You can view the conversation but cannot send messages</p>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatMessage}
+                        onChange={(e) => setChatMessage(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendVendorChat();
+                          }
+                        }}
+                        placeholder="Type your message to vendor..."
+                        className="flex-1 px-4 py-2 text-sm border border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                      <button
+                        onClick={handleSendVendorChat}
+                        disabled={!chatMessage.trim() || sending}
+                        className="px-5 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                      >
+                        {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
           </div>
@@ -1920,51 +1928,58 @@ const TravelRequestDetailView: React.FC<TravelRequestDetailViewProps> = ({ reque
 
             {/* Chat Input */}
             <div className="p-3 bg-white border-t border-slate-200">
-              <div className="flex gap-2 items-end">
-                <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                  className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  {uploading ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Paperclip size={18} />}
-                </button>
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  className="hidden" 
-                  onChange={handleFileSelect}
-                />
-                
-                <div className="flex-1 relative">
-                  <textarea 
-                    value={chatMessage}
-                    onChange={(e) => setChatMessage(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        if (!sending) handleSendMessage();
-                      }
-                    }}
-                    disabled={sending}
-                    placeholder="Type a message..."
-                    rows={1}
-                    className="w-full pl-3 pr-10 py-2 bg-slate-100 border-transparent focus:bg-white border focus:border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none overflow-hidden"
-                    style={{ minHeight: '40px', maxHeight: '100px' }}
-                    onInput={(e) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      target.style.height = 'auto';
-                      target.style.height = target.scrollHeight + 'px';
-                    }}
-                  />
-                  <button 
-                    onClick={handleSendMessage}
-                    disabled={sending || !chatMessage.trim()}
-                    className="absolute right-2 bottom-2 p-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all disabled:opacity-0 disabled:transform disabled:scale-90 shadow-md shadow-blue-200"
-                  >
-                    {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  </button>
+              {isVendor ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                  <p className="text-xs text-amber-700 font-medium">🔒 This is internal team chat</p>
+                  <p className="text-[10px] text-amber-600 mt-1">Vendors cannot access internal team communication</p>
                 </div>
-              </div>
+              ) : (
+                <div className="flex gap-2 items-end">
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? <Loader2 size={18} className="animate-spin text-blue-600" /> : <Paperclip size={18} />}
+                  </button>
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    className="hidden" 
+                    onChange={handleFileSelect}
+                  />
+                  
+                  <div className="flex-1 relative">
+                    <textarea 
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          if (!sending) handleSendMessage();
+                        }
+                      }}
+                      disabled={sending}
+                      placeholder="Type a message..."
+                      rows={1}
+                      className="w-full pl-3 pr-10 py-2 bg-slate-100 border-transparent focus:bg-white border focus:border-blue-200 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none overflow-hidden"
+                      style={{ minHeight: '40px', maxHeight: '100px' }}
+                      onInput={(e) => {
+                        const target = e.target as HTMLTextAreaElement;
+                        target.style.height = 'auto';
+                        target.style.height = target.scrollHeight + 'px';
+                      }}
+                    />
+                    <button 
+                      onClick={handleSendMessage}
+                      disabled={sending || !chatMessage.trim()}
+                      className="absolute right-2 bottom-2 p-1.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all disabled:opacity-0 disabled:transform disabled:scale-90 shadow-md shadow-blue-200"
+                    >
+                      {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           

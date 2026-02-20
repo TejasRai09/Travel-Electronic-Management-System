@@ -13,6 +13,7 @@ import { pocRouter } from './routes/poc.js';
 import { vendorRouter } from './routes/vendor.js';
 import { adminRouter } from './routes/admin.js';
 import notificationRouter from './routes/notifications.js';
+import policyRouter from './routes/policy.js';
 
 console.log('Starting server...');
 
@@ -46,6 +47,7 @@ app.use('/api/poc', pocRouter);
 app.use('/api/vendor', vendorRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/policy', policyRouter);
 
 // Start server first so the frontend wait-on script can resolve
 app.listen(PORT, async () => {

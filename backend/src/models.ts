@@ -6,6 +6,7 @@ export type EmployeeProfile = {
   department?: string;
   managerEmail?: string;
   phone?: string;
+  impactLevel?: string; // UC, 1, 2A-C, 3A-C, 4A-C, 5A-C, 6A-C
 };
 
 const employeeProfileSchema = new Schema<EmployeeProfile>(
@@ -15,6 +16,7 @@ const employeeProfileSchema = new Schema<EmployeeProfile>(
     department: { type: String, required: false, trim: true, default: '' },
     managerEmail: { type: String, required: false, trim: true },
     phone: { type: String, required: false, trim: true },
+    impactLevel: { type: String, required: false, trim: true, default: '6C' }, // Default to lowest grade
   },
   { _id: false }
 );
@@ -418,3 +420,145 @@ activityLogSchema.index({ userEmail: 1, createdAt: -1 });
 activityLogSchema.index({ action: 1, createdAt: -1 });
 
 export const ActivityLog = mongoose.models.ActivityLog || mongoose.model<ActivityLogDoc>('ActivityLog', activityLogSchema);
+
+// Travel Policy Management
+export type TravelModeEntitlement = {
+  airTravel: {
+    allowed: boolean;
+    classes: string[]; // e.g., ['Business', 'Premium Economy', 'Economy']
+  };
+  trainTravel: {
+    allowed: boolean;
+    classes: string[]; // e.g., ['1AC', '2AC', '3AC', 'Executive Chair Car', 'AC Chair Car']
+  };
+  publicTransport: {
+    allowed: boolean;
+    types: string[]; // e.g., ['AC Bus', 'Non-AC Bus']
+  };
+};
+
+export type LocalConveyance = {
+  options: string[]; // e.g., ['Hired Taxi (Luxury Car)', 'Uber Sedan', 'Uber Go', 'Uber Auto', '3-Wheeler', 'Public Transport']
+};
+
+export type ImpactLevelPolicy = {
+  level: string; // e.g., 'UC', '1', '2A', '2B', '2C', '3A', '3B', '3C', '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'
+  travelMode: TravelModeEntitlement;
+  localConveyance: LocalConveyance;
+  description?: string;
+};
+
+export type CityGroup = {
+  name: string; // 'Group A', 'Group B', 'Group C'
+  cities: string[];
+  roomRentLimit: number; // 0 means actual expenses
+  foodExpenseLimit: number; // 0 means actual expenses
+};
+
+export type PolicyRules = {
+  incidentalExpenses: number;
+  advanceBookingDays: number; // minimum days to book air tickets in advance
+  expenseSubmissionDays: number; // days to submit expenses after return
+  expenseSettlementDays: number; // days for accounts to settle expenses
+  outstandingAdvanceWeeks: number; // weeks after which advance is deducted from salary
+  roomRentDeviationPercent: number; // allowed deviation percentage
+  requireOriginalBills: boolean;
+  guestHouseMandatory: boolean;
+  alcoholReimbursement: boolean;
+  cigaretteReimbursement: boolean;
+};
+
+export type TravelPolicyDoc = {
+  _id?: string;
+  policyName: string;
+  policyVersion: string;
+  impactLevels: ImpactLevelPolicy[];
+  cityGroups: CityGroup[];
+  policyRules: PolicyRules;
+  isActive: boolean;
+  effectiveFrom: Date;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+const travelModeEntitlementSchema = new Schema<TravelModeEntitlement>(
+  {
+    airTravel: {
+      allowed: { type: Boolean, required: true, default: false },
+      classes: { type: [String], required: true, default: [] },
+    },
+    trainTravel: {
+      allowed: { type: Boolean, required: true, default: true },
+      classes: { type: [String], required: true, default: [] },
+    },
+    publicTransport: {
+      allowed: { type: Boolean, required: true, default: false },
+      types: { type: [String], required: true, default: [] },
+    },
+  },
+  { _id: false }
+);
+
+const localConveyanceSchema = new Schema<LocalConveyance>(
+  {
+    options: { type: [String], required: true, default: [] },
+  },
+  { _id: false }
+);
+
+const impactLevelPolicySchema = new Schema<ImpactLevelPolicy>(
+  {
+    level: { type: String, required: true, trim: true },
+    travelMode: { type: travelModeEntitlementSchema, required: true },
+    localConveyance: { type: localConveyanceSchema, required: true },
+    description: { type: String, required: false, trim: true },
+  },
+  { _id: false }
+);
+
+const cityGroupSchema = new Schema<CityGroup>(
+  {
+    name: { type: String, required: true, trim: true },
+    cities: { type: [String], required: true, default: [] },
+    roomRentLimit: { type: Number, required: true, default: 0 },
+    foodExpenseLimit: { type: Number, required: true, default: 0 },
+  },
+  { _id: false }
+);
+
+const policyRulesSchema = new Schema<PolicyRules>(
+  {
+    incidentalExpenses: { type: Number, required: true, default: 3000 },
+    advanceBookingDays: { type: Number, required: true, default: 7 },
+    expenseSubmissionDays: { type: Number, required: true, default: 5 },
+    expenseSettlementDays: { type: Number, required: true, default: 7 },
+    outstandingAdvanceWeeks: { type: Number, required: true, default: 3 },
+    roomRentDeviationPercent: { type: Number, required: true, default: 15 },
+    requireOriginalBills: { type: Boolean, required: true, default: true },
+    guestHouseMandatory: { type: Boolean, required: true, default: true },
+    alcoholReimbursement: { type: Boolean, required: true, default: false },
+    cigaretteReimbursement: { type: Boolean, required: true, default: false },
+  },
+  { _id: false }
+);
+
+const travelPolicySchema = new Schema<TravelPolicyDoc>(
+  {
+    policyName: { type: String, required: true, trim: true },
+    policyVersion: { type: String, required: true, trim: true },
+    impactLevels: { type: [impactLevelPolicySchema], required: true, default: [] },
+    cityGroups: { type: [cityGroupSchema], required: true, default: [] },
+    policyRules: { type: policyRulesSchema, required: true },
+    isActive: { type: Boolean, required: true, default: true },
+    effectiveFrom: { type: Date, required: true, default: Date.now },
+    createdBy: { type: String, required: true, lowercase: true, trim: true },
+    updatedBy: { type: String, required: true, lowercase: true, trim: true },
+  },
+  { timestamps: true }
+);
+
+travelPolicySchema.index({ isActive: 1, effectiveFrom: -1 });
+
+export const TravelPolicy = mongoose.models.TravelPolicy || mongoose.model<TravelPolicyDoc>('TravelPolicy', travelPolicySchema);

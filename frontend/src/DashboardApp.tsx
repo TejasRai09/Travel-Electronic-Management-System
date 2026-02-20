@@ -14,6 +14,7 @@ import VendorDashboard from './components/VendorDashboard';
 import VendorRequestView from './components/VendorRequestView';
 import AdminDashboard from './components/AdminDashboard';
 import ActivityLog from './components/ActivityLog';
+import PolicyManagement from './components/PolicyManagement';
 import NotificationPanel from './components/NotificationPanel';
 import { EmployeeProfile, TravelRequest, TravelStatus, TravelMode, UserRole, User, TripNature, DietaryPreference } from './types';
 
@@ -305,8 +306,10 @@ const App: React.FC = () => {
         return <AdminDashboard />;
       case 'activity-log':
         return <ActivityLog />;
+      case 'policy-management':
+        return <PolicyManagement />;
       case 'view-request':
-        return selectedRequest ? <TravelRequestDetailView request={selectedRequest} onBack={handleBackToBookings} isPOC={isPOC} isManager={isManager} /> : null;
+        return selectedRequest ? <TravelRequestDetailView request={selectedRequest} onBack={handleBackToBookings} isPOC={isPOC} isManager={isManager} isVendor={isVendor} /> : null;
       case 'expert':
         return <ExpertAnalysis requests={requests} />;
       case 'profile':

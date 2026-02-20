@@ -10,9 +10,13 @@
   --brand-teal: #14b8a6;
   --brand-teal-deep: #0f766e;
   --brand-amber: #fbbf24;
+  --brand-purple: #8b5cf6;
+  --brand-indigo: #6366f1;
 
   --surface: rgba(255, 255, 255, 0.86);
   --surface-strong: rgba(255, 255, 255, 0.92);
+  --glass: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.4);
   --ring: rgba(2, 132, 199, 0.25);
 }
 
@@ -27,56 +31,180 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 
-  /* Background (subtle, travel-ish sky gradient) */
+  /* Enhanced animated gradient background */
   background:
-    radial-gradient(900px 520px at 18% 18%, rgba(14, 165, 233, 0.16), rgba(255, 255, 255, 0) 60%),
-    radial-gradient(900px 520px at 82% 28%, rgba(20, 184, 166, 0.14), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(800px 520px at 55% 88%, rgba(251, 191, 36, 0.10), rgba(255, 255, 255, 0) 58%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 60%, #eef2ff 100%);
+    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.12), transparent 50%),
+    radial-gradient(circle at 80% 30%, rgba(14, 165, 233, 0.15), transparent 55%),
+    radial-gradient(circle at 40% 80%, rgba(20, 184, 166, 0.13), transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(139, 92, 246, 0.10), transparent 48%),
+    linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 25%, #dbeafe 50%, #e0e7ff 75%, #ede9fe 100%);
+  background-size: 100% 100%;
+  background-attachment: fixed;
+  animation: gradientShift 20s ease infinite;
 }
 
-/* A small set of motion utilities (replacement for tailwindcss-animate plugin classes). */
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%, 0% 0%; }
+  50% { background-position: 100% 100%, 0% 100%, 100% 0%, 0% 0%, 0% 0%; }
+}
+
+/* Floating label animation */
+.floating-input {
+  position: relative;
+}
+
+.floating-input input:focus ~ label,
+.floating-input input:not(:placeholder-shown) ~ label {
+  transform: translateY(-1.75rem) scale(0.85);
+  background: linear-gradient(to bottom, transparent 0%, transparent 45%, white 45%, white 100%);
+  padding: 0 0.5rem;
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+.floating-input label {
+  position: absolute;
+  left: 1rem;
+  top: 0.875rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  color: #94a3b8;
+  font-weight: 500;
+  transform-origin: left center;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(31, 41, 55, 0.08),
+    0 2px 8px rgba(31, 41, 55, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Enhanced animations */
 @keyframes authFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
 @keyframes authSlideInLeft {
-  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { 
+    opacity: 0; 
+    transform: translate3d(-32px, 0, 0);
+  }
+  to { 
+    opacity: 1; 
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @keyframes authSlideInRight {
-  from { opacity: 0; transform: translate3d(16px, 0, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  from { 
+    opacity: 0; 
+    transform: translate3d(32px, 0, 0);
+  }
+  to { 
+    opacity: 1; 
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 @keyframes authZoomIn95 {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from { 
+    opacity: 0; 
+    transform: scale(0.94) translateY(8px);
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes authFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6), 0 0 60px rgba(20, 184, 166, 0.3); }
 }
 
 .auth-appear-fade {
-  animation: authFadeIn 500ms ease-out both;
+  animation: authFadeIn 600ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .auth-appear-left {
-  animation: authSlideInLeft 500ms ease-out both;
+  animation: authSlideInLeft 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .auth-appear-right {
-  animation: authSlideInRight 500ms ease-out both;
+  animation: authSlideInRight 700ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .auth-appear-zoom {
-  animation: authZoomIn95 300ms ease-out both;
+  animation: authZoomIn95 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.shimmer-effect {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+/* Button hover effects */
+.btn-premium {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-premium:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Input focus glow */
+.input-glow:focus {
+  box-shadow: 
+    0 0 0 3px rgba(14, 165, 233, 0.1),
+    0 4px 12px rgba(14, 165, 233, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-appear-fade,
-  .auth-appear-left,
-  .auth-appear-right,
-  .auth-appear-zoom {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

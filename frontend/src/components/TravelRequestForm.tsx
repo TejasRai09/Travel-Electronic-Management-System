@@ -210,6 +210,15 @@ const TravelRequestForm: React.FC<TravelRequestFormProps> = ({ onSubmit }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string} | null>(null);
 
+  // Policy State
+  const [userImpactLevel, setUserImpactLevel] = useState<string>('');
+  const [activePolicy, setActivePolicy] = useState<any>(null);
+  const [allowedModes, setAllowedModes] = useState<{ air: boolean; train: boolean; bus: boolean }>({
+    air: true,
+    train: true,
+    bus: true
+  });
+
   // Form State
   const [mode, setMode] = useState<TravelMode>(TravelMode.FLIGHT);
   const [nature, setNature] = useState<TripNature>(TripNature.ONE_WAY);
@@ -264,6 +273,7 @@ const TravelRequestForm: React.FC<TravelRequestFormProps> = ({ onSubmit }) => {
 
     (async () => {
       try {
+        // Fetch user profile
         const response = await fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -273,13 +283,44 @@ const TravelRequestForm: React.FC<TravelRequestFormProps> = ({ onSubmit }) => {
         const profile = data?.profile;
         if (!profile) return;
 
+        // Get impact level
+        const impactLevel = profile.impactLevel || '6C'; // Default to lowest grade
+        setUserImpactLevel(impactLevel);
+
+        // Fetch active policy
+        const policyRes = await fetch('/api/policy/active');
+        const policyData = await policyRes.json();
+        
+        if (policyData.ok && policyData.policy) {
+          setActivePolicy(policyData.policy);
+          
+          // Find the user's impact level policy
+          const levelPolicy = policyData.policy.impactLevels.find(
+            (il: any) => il.level === impactLevel
+          );
+          
+          if (levelPolicy) {
+            setAllowedModes({
+              air: levelPolicy.travelMode.airTravel.allowed,
+              train: levelPolicy.travelMode.trainTravel.allowed,
+              bus: levelPolicy.travelMode.publicTransport.allowed
+            });
+            
+            // If air is not allowed and current mode is FLIGHT, switch to TRAIN
+            if (!levelPolicy.travelMode.airTravel.allowed && mode === TravelMode.FLIGHT) {
+              setMode(TravelMode.TRAIN);
+            }
+          }
+        }
+
+        // Prefill name and phone
         const parsed = splitName(String(profile.employeeName || ''));
         setFirstName((prev) => prev || parsed.firstName);
         setMiddleName((prev) => prev || parsed.middleName);
         setLastName((prev) => prev || parsed.lastName);
         setPassengerPhone((prev) => prev || String(profile.phone || ''));
       } catch (error) {
-        console.error('Failed to prefill employee profile', error);
+        console.error('Failed to prefill employee profile or fetch policy', error);
       }
     })();
   }, []);
@@ -638,20 +679,44 @@ const TravelRequestForm: React.FC<TravelRequestFormProps> = ({ onSubmit }) => {
 
             <div className="space-y-4">
               <label className="text-sm font-bold text-slate-700">Travel Mode <span className="text-rose-500">*</span></label>
+              {userImpactLevel && (
+                <div className="text-xs text-slate-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                  <span className="font-semibold">Your Impact Level: {userImpactLevel}</span>
+                  {!allowedModes.air && <span className="ml-2 text-amber-700">• Air travel not permitted</span>}
+                </div>
+              )}
               <div className="flex p-1.5 bg-slate-100/50 backdrop-blur-md border border-white/20 rounded-2xl">
                 <button
                   type="button"
-                  onClick={() => setMode(TravelMode.FLIGHT)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${mode === TravelMode.FLIGHT ? 'bg-white text-blue-600 shadow-lg shadow-blue-900/5 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                  onClick={() => allowedModes.air && setMode(TravelMode.FLIGHT)}
+                  disabled={!allowedModes.air}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${
+                    !allowedModes.air 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' 
+                      : mode === TravelMode.FLIGHT 
+                        ? 'bg-white text-blue-600 shadow-lg shadow-blue-900/5 scale-[1.02]' 
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'
+                  }`}
+                  title={!allowedModes.air ? `Air travel not allowed for ${userImpactLevel}` : ''}
                 >
                   <Plane size={14} /> Flight
+                  {!allowedModes.air && <span className="ml-1 text-[10px]">🔒</span>}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMode(TravelMode.TRAIN)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${mode === TravelMode.TRAIN ? 'bg-white text-blue-600 shadow-lg shadow-blue-900/5 scale-[1.02]' : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'}`}
+                  onClick={() => allowedModes.train && setMode(TravelMode.TRAIN)}
+                  disabled={!allowedModes.train}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs font-bold rounded-xl transition-all duration-300 ${
+                    !allowedModes.train 
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-50' 
+                      : mode === TravelMode.TRAIN 
+                        ? 'bg-white text-blue-600 shadow-lg shadow-blue-900/5 scale-[1.02]' 
+                        : 'text-slate-500 hover:text-slate-700 hover:bg-white/40'
+                  }`}
+                  title={!allowedModes.train ? `Train travel not allowed for ${userImpactLevel}` : ''}
                 >
                   <Train size={14} /> Train
+                  {!allowedModes.train && <span className="ml-1 text-[10px]">🔒</span>}
                 </button>
               </div>
             </div>

@@ -566,13 +566,30 @@ const AdminDashboard: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Impact Level
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={employeeForm.impactLevel}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, impactLevel: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., 3A, 3B, 3C"
-                  />
+                  >
+                    <option value="">Select Impact Level</option>
+                    <option value="UC">UC (CMD, MD, CXO)</option>
+                    <option value="1">Grade 1 (SVP, VP)</option>
+                    <option value="2A">Grade 2A (GM)</option>
+                    <option value="2B">Grade 2B (DGM)</option>
+                    <option value="2C">Grade 2C</option>
+                    <option value="3A">Grade 3A (Manager)</option>
+                    <option value="3B">Grade 3B (Manager)</option>
+                    <option value="3C">Grade 3C (Manager)</option>
+                    <option value="4A">Grade 4A (Asst Manager)</option>
+                    <option value="4B">Grade 4B (Asst Manager)</option>
+                    <option value="4C">Grade 4C (Asst Manager)</option>
+                    <option value="5A">Grade 5A (Officer) - No Air</option>
+                    <option value="5B">Grade 5B (Officer) - No Air</option>
+                    <option value="5C">Grade 5C (Officer) - No Air</option>
+                    <option value="6A">Grade 6A (Jr Staff) - No Air</option>
+                    <option value="6B">Grade 6B (Jr Staff) - No Air</option>
+                    <option value="6C">Grade 6C (Jr Staff) - No Air</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

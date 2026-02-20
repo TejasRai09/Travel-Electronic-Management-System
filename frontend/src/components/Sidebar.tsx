@@ -9,7 +9,8 @@ import {
   X,
   Package,
   Shield,
-  Activity
+  Activity,
+  FileText
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isOpen, setI
     ? [
         { id: 'admin-dashboard', label: 'Admin Dashboard', icon: Shield },
         { id: 'activity-log', label: 'Activity Log', icon: Activity },
+        { id: 'policy-management', label: 'Policy Management', icon: FileText },
       ]
     : isVendor 
     ? [{ id: 'vendor-dashboard', label: 'Vendor Dashboard', icon: Package }]

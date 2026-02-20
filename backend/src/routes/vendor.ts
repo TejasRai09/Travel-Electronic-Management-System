@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { TravelRequest, Employee, User } from '../models.js';
 import { verifyToken, type AuthenticatedRequest } from '../jwt.js';
 import { createNotification } from './notifications.js';
+import { logActivity } from '../activityLogger.js';
 
 const router = Router();
 
@@ -159,12 +160,13 @@ router.post('/requests/:id/chat', verifyToken, async (req: AuthenticatedRequest,
 
     const user = await User.findOne({ email: req.user!.email });
     
-    // Verify user is either the vendor or the requester
+    // Verify user is either the vendor, POC, or the requester
     const isVendor = user?.isVendor;
+    const isPOC = user?.isPOC;
     const isRequester = req.user!.email === request.originatorEmail;
     
-    if (!isVendor && !isRequester) {
-      return res.status(403).json({ ok: false, error: 'Access denied. Only vendor and requester can participate in this chat.' });
+    if (!isVendor && !isPOC && !isRequester) {
+      return res.status(403).json({ ok: false, error: 'Access denied. Only vendor, POC, and requester can participate in this chat.' });
     }
 
     // Initialize vendorChatMessages array if not exists
@@ -181,6 +183,17 @@ router.post('/requests/:id/chat', verifyToken, async (req: AuthenticatedRequest,
     });
 
     await request.save();
+    
+    // Log the activity
+    const senderName = user?.profile?.fullName || user?.email || req.user!.email;
+    const recipientType = isVendor ? 'POC' : 'Vendor';
+    await logActivity(
+      req.user!.email,
+      senderName,
+      'vendor_chat_message',
+      `Sent message to ${recipientType} in request ${request.uniqueId}: "${message.trim().substring(0, 50)}${message.trim().length > 50 ? '...' : ''}"`,
+      req
+    );
     
     // Send notification to the other party
     if (isVendor) {
