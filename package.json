@@ -1,37 +1,31 @@
 {
   "name": "nfo-approval-portal",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "npm run dev",
-    "dev": "concurrently --raw --kill-others \"npm run dev:server\" \"npm run dev:client:wait\"",
-    "dev:client": "vite",
-    "dev:client:wait": "wait-on tcp:127.0.0.1:8787 && npm run dev:client",
-    "dev:server": "cd server && npm run dev",
-    "build": "vite build",
-    "preview": "vite preview",
-    "setup": "npm install && npm --prefix server install && npm run seed",
-    "seed": "npm --prefix server run import:employees -- ../Book20.xlsx"
-  },
-  "dependencies": {
-    "@google/genai": "^1.40.0",
-    "@types/express": "^5.0.6",
-    "jspdf": "^4.1.0",
-    "jspdf-autotable": "^5.0.7",
-    "lucide-react": "^0.563.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-hot-toast": "^2.6.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "dev": "concurrently --raw --kill-others \"npm run dev:backend\" \"npm run dev:frontend:wait\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:frontend:wait": "wait-on tcp:127.0.0.1:8787 && npm run dev:frontend",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "build:all": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "setup": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "seed": "cd backend && npm run import:employees",
+    "create:poc": "cd backend && npm run create:poc",
+    "create:vendor": "cd backend && npm run create:vendor",
+    "create:admin": "cd backend && npm run create:admin"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
+    "@types/node": "^25.3.0",
     "concurrently": "^9.1.2",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0",
     "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   }
 }

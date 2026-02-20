@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "import:employees": "tsx src/importEmployees.ts",
     "create:poc": "tsx src/createPOC.ts",
-    "create:vendor": "tsx src/createVendor.ts"
+    "create:vendor": "tsx src/createVendor.ts",
+    "create:admin": "tsx src/createAdmin.ts"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",

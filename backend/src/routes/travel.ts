@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { TravelRequest, Employee, ApprovalChainItem } from '../models.js';
 import { verifyToken, type AuthenticatedRequest } from '../jwt.js';
 import { createNotification } from './notifications.js';
+import { logActivity } from '../activityLogger.js';
 
 const router = Router();
 
@@ -373,6 +374,15 @@ router.post('/', verifyToken, async (req: AuthenticatedRequest, res) => {
       );
     }
     
+    // Log the activity
+    await logActivity(
+      req.user!.email,
+      employee.employeeName || req.user!.email,
+      'create_travel_request',
+      `Created ${tripNature} travel request from ${resolvedOrigin || 'origin'} to ${resolvedDestination || 'destination'} on ${travelDate}`,
+      req
+    );
+    
     res.json({ 
       ok: true, 
       request: { 
@@ -572,6 +582,15 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
         request.uniqueId
       );
       
+      // Log the rejection activity
+      await logActivity(
+        actorEmail,
+        actorName,
+        'reject_travel_request',
+        `Rejected travel request ${request.uniqueId} - ${statusMessage}`,
+        req
+      );
+      
       const obj = request.toObject();
       return res.json({ 
         ok: true, 
@@ -618,6 +637,15 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
           `Your travel request ${request.uniqueId} has been approved by POC and sent to vendor`,
           request._id.toString(),
           request.uniqueId
+        );
+        
+        // Log POC approval activity
+        await logActivity(
+          actorEmail,
+          actorName,
+          'poc_approve_request',
+          `Approved travel request ${request.uniqueId} as POC (Final Approval) - ${statusMessage}`,
+          req
         );
         
         const obj = request.toObject();
@@ -698,6 +726,15 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
             request._id.toString(),
             request.uniqueId
           );
+          
+          // Log manager approval activity (intermediate)
+          await logActivity(
+            actorEmail,
+            actorName,
+            'manager_approve_request',
+            `Approved travel request ${request.uniqueId} as ${currentApprover.impactLevel} manager (Level ${currentIndex + 1}/${approvalChain.length}) - Forwarded to ${nextApprover.name}`,
+            req
+          );
         } else {
           // All managers in chain have approved - move to POC
           request.status = 'ManagerApproved';
@@ -730,6 +767,15 @@ router.patch('/:id/status', verifyToken, async (req: AuthenticatedRequest, res) 
             `Your travel request ${request.uniqueId} was approved by all managers and is now with Travel POC`,
             request._id.toString(),
             request.uniqueId
+          );
+          
+          // Log final manager approval activity
+          await logActivity(
+            actorEmail,
+            actorName,
+            'manager_approve_request',
+            `Approved travel request ${request.uniqueId} as final ${currentApprover.impactLevel} manager - All manager approvals complete, sent to POC`,
+            req
           );
         }
       }
